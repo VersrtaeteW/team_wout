@@ -37,6 +37,94 @@ PREFIX_ROL = {
     "BEA": "beast_master",
 }
 
+# Domein-mapping op basis van trefwoorden in incidentbeschrijving
+DOMEIN_TREFWOORDEN = {
+    "archmage": [
+        "zegel", "mana", "ritueel", "magie", "magisch", "leylijn", "leylijnen",
+        "bezwering", "runen", "kristalresonantie", "aether"
+    ],
+    "engineer": [
+        "klep", "druk", "leiding", "constructie", "netwerk", "kabel", "pols",
+        "frequentie", "toren", "log", "logs", "technisch", "klokslag", "resonator", "versterker"
+    ],
+    "guardian_keeper": [
+        "poort", "wacht", "toegang", "patrouille", "schild", "schilden", "burcht",
+        "beveiliging", "inbraak", "wachtpost", "versperring", "poortschild"
+    ],
+    "historian": [
+        "archief", "verdrag", "verleden", "kroniek", "bouwakte", "eeuwenoud",
+        "geschiedenis", "precedent", "oorkonde", "historisch", "document"
+    ],
+    "oracle": [
+        "visioen", "cyclus", "patroon", "sterren", "toekomst", "voorspelling",
+        "droom", "tekenen", "conjunctie", "profetie", "openbaring"
+    ],
+    "beast_master": [
+        "beest", "wezen", "sporen", "woud", "dier", "dieren", "dierlijk",
+        "onrust", "fauna", "wolf", "wolven", "vogels", "bos"
+    ],
+}
+
+STANDAARD_INCIDENT = os.getenv(
+    "INCIDENT",
+    "De Desync van Achrona: onverklaarbare timing-afwijkingen in het datanetwerk van de datatoren, leidingen en constructies onder druk."
+)
+
+DAG_PATTERN = re.compile(r"\b(dag\s+\d+)\b", re.IGNORECASE)
+TIJD_PATTERN = re.compile(r"\b(\d{1,2}:\d{2})\b")
+
+# Status-tegenstellingen per record-ID / spreker
+STATUS_STABIEL = re.compile(
+    r"\b(gesloten|sluit|sluiten|stabiel|stabiele|normaal|normale|rustig|gekalmeerd)\b",
+    re.IGNORECASE,
+)
+STATUS_DEFECT = re.compile(
+    r"\b(open|geopend|opent|opening|verbroken|verbreekt|defect|defecte|afwijking|verstoring|onrust|falen|gebroken)\b",
+    re.IGNORECASE,
+)
+
+VERIFICATIE_COLLEGA_INSTRUCTIE = "Noem naast je eigen bewijs-ID's ook één collega die jouw bevindingen kan verifiëren."
+
+
+def bepaal_specialist_voor_incident(incident_tekst, beschikbare_rollen=None):
+    """Bepaalt de meest relevante specialist op basis van trefwoorden in de incidentbeschrijving."""
+    if not incident_tekst:
+        return "engineer"
+    tekst_lower = incident_tekst.lower()
+    scores = Counter()
+    for rol, trefwoorden in DOMEIN_TREFWOORDEN.items():
+        if beschikbare_rollen and rol not in beschikbare_rollen:
+            continue
+        for kw in trefwoorden:
+            matches = len(re.findall(r"\b" + re.escape(kw), tekst_lower))
+            if matches:
+                scores[rol] += matches
+    if scores:
+        return scores.most_common(1)[0][0]
+    return "engineer"
+
+
+def vraag_voor_specialist_beurt1(lid, incident_tekst=""):
+    """Genereert de openingsvraag voor de specialist in Beurt 1 met verificatie-instructie."""
+    rol = lid.ROL
+    naam = lid.NAAM
+    if rol == "archmage":
+        kern = "welke specifieke leylijnmetingen en magische registraties (met exacte ARC-record-ID's) tonen de eerste afwijkingen van het incident?"
+    elif rol == "engineer":
+        kern = "welke specifieke logbestanden en meetgegevens (met exacte ENG-record-ID's) uit de datatoren tonen de eerste technische afwijkingen van het incident?"
+    elif rol == "guardian_keeper":
+        kern = "wat registreren de wachtrapporten en schildmetingen (met exacte GUA-record-ID's) over de status van de poorten en schilden tijdens het incident?"
+    elif rol == "historian":
+        kern = "welke archiefrecords en kroniekfragmenten (met exacte HIS-record-ID's) documenteren vergelijkbare incidenten of de historische context van dit incident?"
+    elif rol == "oracle":
+        kern = "welke visioenen en voortekenen (met exacte ORA-record-ID's) openbaren het patroon en de cyclus van dit incident?"
+    elif rol == "beast_master":
+        kern = "welke veldnotities en logboekregistraties van dierenonrust (met exacte BEA-record-ID's) tonen de eerste sporen van dit incident in het woud?"
+    else:
+        kern = "welke specifieke feiten en bewijs-ID's uit je Kennisbron tonen de eerste afwijkingen van het incident?"
+
+    return f"{naam}, {kern} {VERIFICATIE_COLLEGA_INSTRUCTIE}"
+
 
 def normaliseer_id(id_str):
     """Zet exotische streepjes om naar standaard ASCII koppelteken."""
@@ -59,9 +147,10 @@ def extraheer_ids(tekst):
 class DebatState:
     """Houdt de voortgang van het debat programmatisch bij."""
 
-    def __init__(self, leden):
+    def __init__(self, leden, incident=None):
         self.leden = leden
         self.leden_per_rol = {l.ROL: l for l in leden}
+        self.incident = incident or os.getenv("INCIDENT", STANDAARD_INCIDENT)
         # Wie heeft hoe vaak gesproken
         self.spreekbeurten = Counter()
         # Alle genoemde record-ID's per rol die ze noemde
@@ -78,18 +167,220 @@ class DebatState:
         self.tegenspraken = []
         # Volledige debatteksten
         self.debat_teksten = []
+        # Genoemde collega's per spreker
+        self.genoemde_collegas = defaultdict(list)
+        # Tijdlijn & conflict-detectie
+        self.tijdlijn_claims = []
+        self.conflicten = []
 
     def registreer_beurt(self, rol, tekst):
-        """Verwerk een nieuwe beurt: tel spreekbeurten, extraheer IDs."""
+        """Verwerk een nieuwe beurt: tel spreekbeurten, extraheer IDs, detecteer conflicten."""
+        # Wederhoor: als deze rol spreekt en een openstaand conflict had waarin hij wederhoor moest geven
+        for c in self.conflicten:
+            if not c.get("opgelost", False) and c.get("wederhoor_rol") == rol:
+                c["opgelost"] = True
+                c["wederhoor_beurt"] = self.aantal_beurten + 1
+
         self.spreekbeurten[rol] += 1
         ids = extraheer_ids(tekst)
         self.ids_per_spreker[rol].update(ids)
         self.alle_ids.update(ids)
         self.debat_teksten.append(f"{self.leden_per_rol[rol].NAAM}: {tekst}")
 
-        # Detecteer tegenspraken
-        if "TEGENSPRAAK:" in tekst.upper():
-            self.tegenspraken.append({"spreker": rol, "tekst": tekst})
+        # Detecteer genoemde collega's in de tekst
+        tekst_lower = tekst.lower()
+        for l in self.leden:
+            if l.ROL != rol and (l.ROL in tekst_lower or l.NAAM.lower() in tekst_lower):
+                if l.ROL not in self.genoemde_collegas[rol]:
+                    self.genoemde_collegas[rol].append(l.ROL)
+
+        # Automatische tijdlijn- en conflict-detectie
+        self._detecteer_conflicten(rol, tekst)
+
+    def _detecteer_conflicten(self, rol, tekst):
+        """Extraheer tijdstippen, dagen en status-tegenstellingen per record-ID en TEGENSPRAAK: markers."""
+        # 1. TEGENSPRAAK: markers
+        for line in tekst.splitlines():
+            if "TEGENSPRAAK:" in line.upper():
+                self.tegenspraken.append({"spreker": rol, "tekst": line})
+                line_ids = extraheer_ids(line)
+                dagen = DAG_PATTERN.findall(line)
+                tijden = TIJD_PATTERN.findall(line)
+                tijdstip_str = dagen[0] if dagen else (tijden[0] if tijden else "het incident")
+
+                id_1, id_2 = None, None
+                wederhoor_rol = None
+
+                if len(line_ids) >= 2:
+                    id_1, id_2 = line_ids[0], line_ids[1]
+                elif len(line_ids) == 1:
+                    id_2 = line_ids[0]
+                    andere_ids = [i for i in self.alle_ids if PREFIX_ROL.get(i[:3]) != rol]
+                    id_1 = andere_ids[-1] if andere_ids else "ONBEKEND"
+                else:
+                    spreker_ids = [i for i in self.alle_ids if PREFIX_ROL.get(i[:3]) == rol]
+                    andere_ids = [i for i in self.alle_ids if PREFIX_ROL.get(i[:3]) != rol]
+                    id_2 = spreker_ids[-1] if spreker_ids else "ID-A"
+                    id_1 = andere_ids[-1] if andere_ids else "ID-B"
+
+                # Wederhoor rol bepalen: rol die tegengesproken wordt
+                for test_id in (id_1, id_2):
+                    if test_id and test_id[:3] in PREFIX_ROL:
+                        r = PREFIX_ROL[test_id[:3]]
+                        if r != rol:
+                            wederhoor_rol = r
+                            break
+
+                if not wederhoor_rol:
+                    for l in self.leden:
+                        if l.ROL != rol and (l.ROL in line.lower() or l.NAAM.lower() in line.lower()):
+                            wederhoor_rol = l.ROL
+                            break
+
+                if not wederhoor_rol:
+                    vorige_sprekers = [s for s in self.spreekbeurten.keys() if s != rol]
+                    wederhoor_rol = vorige_sprekers[-1] if vorige_sprekers else (self.niet_gesproken_rollen[0].ROL if self.niet_gesproken_rollen else None)
+
+                if id_1 and id_2 and wederhoor_rol:
+                    conflict_key = (min(id_1, id_2), max(id_1, id_2), tijdstip_str.lower())
+                    if not any(c.get("key") == conflict_key for c in self.conflicten):
+                        id_1_fmt = f"[{id_1.strip('[]')}]"
+                        id_2_fmt = f"[{id_2.strip('[]')}]"
+                        waarschuwing = (
+                            f"⚠️ AUTOMATISCH GEDETECTEERD CONFLICT: {id_1_fmt} en {id_2_fmt} "
+                            f"spreken elkaar tegen op tijdstip/dag {tijdstip_str}. Dwing direct wederhoor af!"
+                        )
+                        self.conflicten.append({
+                            "key": conflict_key,
+                            "id_1": id_1.strip("[]"),
+                            "id_2": id_2.strip("[]"),
+                            "rol_1": rol,
+                            "rol_2": wederhoor_rol,
+                            "wederhoor_rol": wederhoor_rol,
+                            "tijdstip": tijdstip_str,
+                            "waarschuwing": waarschuwing,
+                            "type": "tegenspraak_marker",
+                            "opgelost": False,
+                            "beurt": self.aantal_beurten,
+                        })
+
+        # 2. Status-tegenstellingen per tijdstip/dag en record-ID
+        segmenten = []
+        for r in tekst.splitlines():
+            r_strip = r.strip()
+            if not r_strip:
+                continue
+            if r_strip.startswith("|") and r_strip.endswith("|"):
+                segmenten.append(r_strip)
+            else:
+                zinnen = re.split(r"(?<=[.!?])\s+", r_strip)
+                segmenten.extend(z for z in zinnen if z.strip())
+
+        for seg in segmenten:
+            seg_ids = extraheer_ids(seg)
+            if not seg_ids:
+                continue
+
+            dagen = DAG_PATTERN.findall(seg)
+            tijden = TIJD_PATTERN.findall(seg)
+            if not dagen and not tijden:
+                continue
+
+            heeft_stabiel = bool(STATUS_STABIEL.search(seg))
+            heeft_defect = bool(STATUS_DEFECT.search(seg))
+
+            if not heeft_stabiel and not heeft_defect:
+                continue
+
+            status_type = "defect" if heeft_defect else "stabiel"
+            status_woord = (
+                STATUS_DEFECT.search(seg).group(0)
+                if heeft_defect
+                else STATUS_STABIEL.search(seg).group(0)
+            )
+
+            tijdstip_weergave = (
+                f"{dagen[0]} ({tijden[0]})" if (dagen and tijden)
+                else (dagen[0] if dagen else tijden[0])
+            )
+            tijd_keys = set()
+            if dagen:
+                tijd_keys.add(dagen[0].lower().replace("  ", " "))
+            if tijden:
+                tijd_keys.add(tijden[0])
+
+            for rid in seg_ids:
+                claim = {
+                    "rol": rol,
+                    "id": rid,
+                    "tijd_keys": tijd_keys,
+                    "tijdstip_weergave": tijdstip_weergave,
+                    "status_type": status_type,
+                    "status_woord": status_woord,
+                    "beurt": self.aantal_beurten,
+                    "tekst": seg,
+                }
+                self.tijdlijn_claims.append(claim)
+
+                # Vergelijk met eerdere claims van andere sprekers
+                for prev in self.tijdlijn_claims:
+                    if prev["rol"] == rol:
+                        continue
+                    gedeelde_tijd = prev["tijd_keys"] & claim["tijd_keys"]
+                    if not gedeelde_tijd:
+                        continue
+                    if prev["status_type"] != claim["status_type"]:
+                        gedeeld_tijdstip_str = sorted(list(gedeelde_tijd))[0]
+                        display_tijd = (
+                            claim["tijdstip_weergave"]
+                            if gedeeld_tijdstip_str in claim["tijdstip_weergave"].lower()
+                            else gedeeld_tijdstip_str
+                        )
+                        id_1 = prev["id"]
+                        id_2 = claim["id"]
+                        conflict_key = (min(id_1, id_2), max(id_1, id_2), gedeeld_tijdstip_str)
+
+                        if not any(c.get("key") == conflict_key for c in self.conflicten):
+                            id_1_fmt = f"[{id_1.strip('[]')}]"
+                            id_2_fmt = f"[{id_2.strip('[]')}]"
+                            waarschuwing = (
+                                f"⚠️ AUTOMATISCH GEDETECTEERD CONFLICT: {id_1_fmt} en {id_2_fmt} "
+                                f"spreken elkaar tegen op tijdstip/dag {display_tijd}. Dwing direct wederhoor af!"
+                            )
+                            self.conflicten.append({
+                                "key": conflict_key,
+                                "id_1": id_1.strip("[]"),
+                                "id_2": id_2.strip("[]"),
+                                "rol_1": prev["rol"],
+                                "rol_2": rol,
+                                "wederhoor_rol": prev["rol"],
+                                "tijdstip": display_tijd,
+                                "waarschuwing": waarschuwing,
+                                "type": "status_conflict",
+                                "opgelost": False,
+                                "beurt": self.aantal_beurten,
+                            })
+
+    def heeft_onopgeloste_conflicten(self):
+        """Geeft True terug zolang er minstens één conflict openstaat dat nog geen wederhoor heeft gehad."""
+        return any(not c.get("opgelost", False) for c in self.conflicten)
+
+    def open_conflicten(self):
+        """Geeft de lijst van alle momenteel onopgeloste conflicten terug."""
+        return [c for c in self.conflicten if not c.get("opgelost", False)]
+
+    def eerstvolgende_open_conflict(self):
+        """Geeft het eerste onopgeloste conflict terug."""
+        c = self.open_conflicten()
+        return c[0] if c else None
+
+    def laatst_genoemde_collega(self):
+        """Vind de meest recent genoemde collega die nog niet gesproken heeft."""
+        for rol, collegas in reversed(list(self.genoemde_collegas.items())):
+            for c in collegas:
+                if self.spreekbeurten[c] == 0:
+                    return c
+        return None
 
     @property
     def gesproken_rollen(self):
@@ -141,7 +432,7 @@ class DebatState:
                 "ORA": sorted(ora_ids),
                 "BEA": sorted(bea_ids),
             },
-            "open_geschillen": len(self.tegenspraken),
+            "open_geschillen": len(self.open_conflicten()),
         }
 
 
@@ -149,7 +440,7 @@ class DebatState:
 # Koning: orchestratie met bewijsmatrix
 # ---------------------------------------------------------------------------
 
-async def kies_volgende(beurten, leden, state, async_client=None, model=None, opties=None):
+async def kies_volgende(beurten, leden, state, async_client=None, model=None, opties=None, incident=None):
     """De Koning leidt het debat: hij beslist wie spreekt.
 
     Strategie: Triage -> Keten-reacties -> Wederhoor -> Stop bij bewezen 3-luik.
@@ -157,16 +448,27 @@ async def kies_volgende(beurten, leden, state, async_client=None, model=None, op
     if state.aantal_beurten >= BEURTENBUDGET:
         return None, None, f"Beurtenbudget op ({BEURTENBUDGET} Raadslid-beurten)", []
 
+    incident_tekst = incident or getattr(state, "incident", "") or os.getenv("INCIDENT", STANDAARD_INCIDENT)
+    leden_per_rol = {l.ROL: l for l in leden}
     matrix = state.bewijsmatrix_samenvatting()
 
-    # EARLY STOP: als alle 3 luiken bewezen zijn en er geen open geschillen zijn
-    if matrix["alle_bewezen"] and matrix["open_geschillen"] == 0 and state.aantal_beurten >= 6:
+    # EARLY STOP: als alle 3 luiken bewezen zijn en er geen open geschillen/conflicten zijn
+    # Blokkeer vroegtijdig stoppen (aan: null) zolang er een onopgelost conflict openstaat!
+    if not state.heeft_onopgeloste_conflicten() and matrix["alle_bewezen"] and matrix["open_geschillen"] == 0 and state.aantal_beurten >= 6:
         return None, None, "Alle 3 de slots van de oorzaak (ingreep, mechanisme, verloop) zijn bewezen met record-ID's. Geen open geschillen. Debat wordt afgesloten voor bonuspunten.", []
-
-    leden_per_rol = {l.ROL: l for l in leden}
 
     # LLM-gestuurd orchestreren
     if async_client and model:
+        # Conflict waarschuwingen injecteren als er actieve conflicten zijn
+        conflict_tekst = ""
+        if state.heeft_onopgeloste_conflicten():
+            waarschuwingen = [c["waarschuwing"] for c in state.open_conflicten()]
+            conflict_tekst = (
+                "### ⚠️ AUTOMATISCH GEDETECTEERDE CONFLICTEN (DWING DIRECT WEDERHOOR AF):\n"
+                + "\n".join(waarschuwingen)
+                + "\n\n"
+            )
+
         debat_samenvatting = "\n".join(
             f"- {b['spreker']}: {b.get('tekst', '')[:300]}"
             for b in beurten[-12:]
@@ -191,9 +493,24 @@ async def kies_volgende(beurten, leden, state, async_client=None, model=None, op
             f"  Genoemde record-ID's: {', '.join(matrix['genoemde_ids'][:30]) or '(geen)'}"
         )
 
+        beurt_1_instructie = ""
+        if state.aantal_beurten == 0:
+            specialist_rol = bepaal_specialist_voor_incident(incident_tekst, [l.ROL for l in leden])
+            specialist_lid = leden_per_rol.get(specialist_rol, leden[0])
+            beurt_1_instructie = (
+                f"### BEURT 1 INSTRUCTIE:\n"
+                f"Op basis van de incidentbeschrijving '{incident_tekst[:120]}...' MOET je direct starten bij specialist "
+                f"'{specialist_lid.NAAM}' (rol: '{specialist_rol}').\n"
+                f"VERPLICHT: Vraag naar de eerste feiten en bewijs-ID's, én instrueer dit Raadslid expliciet in de vraag "
+                f"om naast de eigen bewijs-ID's ook één collega te noemen die de bevindingen kan verifiëren.\n\n"
+            )
+
         prompt = (
+            f"{conflict_tekst}"
+            f"{beurt_1_instructie}"
             "Je bent de wijze Koning van de Council of Achrona. Jij leidt het onderzoek naar de Desync.\n"
             "Je doel is om binnen het resterende beurtenbudget de precieze waarheid te ontrafelen.\n\n"
+            f"### INCIDENTBESCHRIJVING:\n{incident_tekst}\n\n"
             "### DE 3 LUIKEN DIE JE MOET BEWIJZEN (met record-ID's):\n"
             "1. INGREEP: Wie deed wat, wanneer? (ENG-xxx voor de technische handeling, ARC-xxx voor toestemming)\n"
             "2. MECHANISME: Hoe leidt de ingreep tot de symptomen? (HIS-xxx voor de bouwakte-waarschuwing, GUA-xxx voor het schildmechanisme, ARC-xxx voor leylijnimpact)\n"
@@ -204,12 +521,12 @@ async def kies_volgende(beurten, leden, state, async_client=None, model=None, op
             f"### BESCHIKBARE ROLLEN:\n{rollen_overzicht}\n\n"
             f"### RECENTE INBRENG:\n{debat_samenvatting}\n\n"
             "### STRATEGIE-REGELS (volg deze strikt):\n"
-            "1. TRIAGE: Begin bij de rol die de hardste feiten heeft (engineer voor logs, historian voor bouwakte).\n"
-            "2. KETEN-REACTIE: Als een rol een beschuldiging of claim maakt, geef de beschuldigde/betrokken rol DIRECT de volgende beurt voor wederhoor.\n"
-            "3. CONVERGENTIE: Als een luik nog niet bewezen is, stuur gericht op dat luik. Vraag EXPLICIET naar record-ID's.\n"
-            "4. STOP-CONDITIE: Als alle 3 luiken bewezen zijn met record-ID's en er geen open geschillen zijn, geef rol: null.\n"
-            "5. EFFICIENCY: Combineer vragen die meerdere luiken tegelijk kunnen bewijzen. Herhaal NOOIT een vraag die al beantwoord is.\n"
-            "6. GESCHILLEN: Als twee rollen elkaar tegenspreken, markeer dit en vraag de rol met het sterkste bewijs om te reageren.\n\n"
+            "1. TRIAGE & BEURT 1: Start bij de meest relevante specialist volgens de domein-trefwoorden. Vraag om verificatie door een collega.\n"
+            "2. CONFLICT & WEDERHOOR: Als er een AUTOMATISCH GEDETECTEERD CONFLICT is, geef de betrokken rol DIRECT de beurt voor wederhoor om de tegenstrijdigheid op te lossen. Stop NOOIT (rol: null) zolang er een conflict openstaat.\n"
+            "3. KETEN-REACTIE: Als een rol een beschuldiging maakt of een collega noemt om bevindingen te verifiëren, geef die rol de volgende beurt.\n"
+            "4. CONVERGENTIE: Als een luik nog niet bewezen is, stuur gericht op dat luik. Vraag EXPLICIET naar record-ID's.\n"
+            "5. STOP-CONDITIE: Als alle 3 luiken bewezen zijn met record-ID's en er GEEN open geschillen/conflicten zijn, geef rol: null.\n"
+            "6. EFFICIENCY: Combineer vragen die meerdere luiken tegelijk kunnen bewijzen. Herhaal NOOIT een vraag die al beantwoord is.\n\n"
             "Geef UITSLUITEND een JSON-object terug:\n"
             "{\n"
             '  "rol": "<rolnaam of null>",\n'
@@ -236,32 +553,93 @@ async def kies_volgende(beurten, leden, state, async_client=None, model=None, op
             reden = data.get("reden", "Gerichte orchestratie door de Koning")
             open_vragen = data.get("open_vragen") or []
 
-            if rol in leden_per_rol or rol is None:
+            # Handhaaf regels voor Beurt 1
+            if state.aantal_beurten == 0:
+                specialist_rol = bepaal_specialist_voor_incident(incident_tekst, [l.ROL for l in leden])
+                rol = specialist_rol
+                if vraag and ("collega" not in vraag.lower() or "verifi" not in vraag.lower()):
+                    vraag = f"{vraag.rstrip()} {VERIFICATIE_COLLEGA_INSTRUCTIE}"
+                elif not vraag:
+                    specialist_lid = leden_per_rol.get(specialist_rol, leden[0])
+                    vraag = vraag_voor_specialist_beurt1(specialist_lid, incident_tekst)
+
+            # BLOKKEER rol is None (aan: null) als er een open conflict is
+            if rol is None and state.heeft_onopgeloste_conflicten():
+                conflict = state.eerstvolgende_open_conflict()
+                wederhoor_rol = conflict["wederhoor_rol"]
+                lid = leden_per_rol.get(wederhoor_rol, leden[0])
+                rol = wederhoor_rol
+                vraag = (
+                    f"{lid.NAAM}, er is een conflict gedetecteerd: [{conflict['id_1']}] en [{conflict['id_2']}] "
+                    f"spreken elkaar tegen op tijdstip/dag {conflict['tijdstip']}. Geef direct wederhoor en verklaar dit met bewijs-ID's."
+                )
+                reden = f"Wederhoor afdwingen wegens conflict op {conflict['tijdstip']} tussen [{conflict['id_1']}] en [{conflict['id_2']}]."
+                open_vragen = [f"Hoe verklaart {wederhoor_rol} de tegenstrijdigheid op {conflict['tijdstip']}?"]
+
+            if rol in leden_per_rol or (rol is None and not state.heeft_onopgeloste_conflicten()):
                 return rol, vraag, reden, open_vragen
         except Exception as e:
             print(f"[Koning orchestrator fallback wegens: {e}]")
 
-    # Fallback: deterministische maar intelligente volgorde
-    return _deterministische_routing(state, leden_per_rol)
+    # Fallback: deterministische routing
+    return _deterministische_routing(state, leden_per_rol, incident=incident_tekst)
 
 
-def _deterministische_routing(state, leden_per_rol):
-    """Deterministische fallback-routing met bewijsmatrix-awareness."""
+def _deterministische_routing(state, leden_per_rol, incident=None):
+    """Deterministische fallback-routing met bewijsmatrix-awareness en conflict-detector."""
     gesproken = state.gesproken_rollen
     matrix = state.bewijsmatrix_samenvatting()
+    incident_tekst = incident or getattr(state, "incident", "") or os.getenv("INCIDENT", STANDAARD_INCIDENT)
 
-    # Fase 1: Eerste ronde - verzamel basisfeiten
+    # Prioriteit 1: Onopgeloste conflicten vereisen DIRECT wederhoor!
+    if state.heeft_onopgeloste_conflicten():
+        conflict = state.eerstvolgende_open_conflict()
+        wederhoor_rol = conflict["wederhoor_rol"]
+        lid = leden_per_rol.get(wederhoor_rol, state.leden[0])
+        return wederhoor_rol, (
+            f"{lid.NAAM}, er is een conflict gedetecteerd: [{conflict['id_1']}] en [{conflict['id_2']}] "
+            f"spreken elkaar tegen op tijdstip/dag {conflict['tijdstip']}. "
+            f"Geef direct wederhoor en verklaar deze tegenstrijdigheid met bewijs-ID's uit je Kennisbron."
+        ), f"Wederhoor afdwingen: conflict op {conflict['tijdstip']} tussen [{conflict['id_1']}] en [{conflict['id_2']}].", [
+            f"Hoe verklaart {wederhoor_rol} de tegenstrijdigheid op {conflict['tijdstip']}?"
+        ]
+
+    # Fase 1: Beurt 1 - start bij specialist volgens domein-trefwoorden
     if state.aantal_beurten == 0:
+        specialist_rol = bepaal_specialist_voor_incident(incident_tekst, [l.ROL for l in state.leden])
+        specialist_lid = leden_per_rol.get(specialist_rol, state.leden[0])
+        vraag = vraag_voor_specialist_beurt1(specialist_lid, incident_tekst)
+        return specialist_rol, vraag, (
+            f"Domein-trefwoordenroutering: incident wijst naar specialist {specialist_lid.NAAM} "
+            f"({specialist_rol}) als meest relevante startpunt om feiten te verzamelen."
+        ), [
+            f"Welke feiten en bewijs-ID's brengt {specialist_lid.NAAM} in?",
+            "Welke collega kan deze bevindingen verifiëren?",
+            "Welke luiken van de oorzaak kunnen direct worden vastgesteld?"
+        ]
+
+    # Fase 2: Keten-reactie op genoemde collega uit vorige beurt
+    collega = state.laatst_genoemde_collega()
+    if collega and collega in leden_per_rol and collega not in gesproken:
+        lid = leden_per_rol[collega]
+        return collega, (
+            f"{lid.NAAM}, je collega heeft je genoemd om de bevindingen te verifiëren. "
+            f"Welke bewijs-ID's uit jouw Kennisbron bevestigen of ontkrachten dit?"
+        ), f"Keten-reactie: verificatie door genoemde collega {lid.NAAM}.", [
+            f"Bevestigt {collega} de bevindingen van de specialist?"
+        ]
+
+    # Niet-gesproken rollen aan bod laten komen
+    if "engineer" not in gesproken and "engineer" in leden_per_rol:
         return "engineer", (
             "Engineer, welke specifieke logbestanden en meetgegevens (met exacte ENG-record-ID's) "
             "uit de datatoren tonen het exacte tijdstip en de eerste technische afwijkingen van de Desync?"
-        ), "Om een feitelijke basis te leggen beginnen we bij de harde, meetbare data.", [
+        ), "Feitelijke logs en data van de Engineer verzamelen.", [
             "Wie heeft welke ingreep uitgevoerd en wanneer (record-ID's)?",
-            "Welk mechanisme veroorzaakt de Desync-symptomen?",
-            "Welk patroon vertoont de Desync in de tijd?"
+            "Welk mechanisme veroorzaakt de Desync-symptomen?"
         ]
 
-    if "archmage" not in gesproken:
+    if "archmage" not in gesproken and "archmage" in leden_per_rol:
         return "archmage", (
             "De Engineer meldt een nieuwe klokslag en leylijn-effecten. "
             "Wat registreren jouw metingen [ARC-xxx] en welke afspraken waren er over toestemming?"
@@ -270,7 +648,7 @@ def _deterministische_routing(state, leden_per_rol):
             "Was er toestemming voor de ingreep?"
         ]
 
-    if "guardian_keeper" not in gesproken:
+    if "guardian_keeper" not in gesproken and "guardian_keeper" in leden_per_rol:
         return "guardian_keeper", (
             "Wat registreren de wachtrapporten [GUA-xxx] over de poortschilden en de Kroonklok? "
             "Hoe werkt het schildmechanisme exact (Art. 2, Art. 3)?"
@@ -279,7 +657,7 @@ def _deterministische_routing(state, leden_per_rol):
             "Is er sprake van een externe inbraak?"
         ]
 
-    if "historian" not in gesproken:
+    if "historian" not in gesproken and "historian" in leden_per_rol:
         return "historian", (
             "Wat staat er in de kroniek en archiefrecords [HIS-xxx] over de Kroonklok en de gevolgen "
             "van een tweede pols? Wat zegt de bouwakte precies?"
@@ -288,8 +666,7 @@ def _deterministische_routing(state, leden_per_rol):
             "Hoe kan de maat hersteld worden?"
         ]
 
-    # Fase 2: Verloop bewijzen en geschillen oplossen
-    if "beast_master" not in gesproken:
+    if "beast_master" not in gesproken and "beast_master" in leden_per_rol:
         return "beast_master", (
             "De Engineer stelt dat de hulpslag op dag 10 om 02:40 is geactiveerd. "
             "Bevestigen jouw woudwaarnemingen [BEA-xxx] dat de dierlijke onrust exact samenvalt "
@@ -299,7 +676,7 @@ def _deterministische_routing(state, leden_per_rol):
             "Welke specifieke BEA-records tonen het patroon?"
         ]
 
-    if "oracle" not in gesproken:
+    if "oracle" not in gesproken and "oracle" in leden_per_rol:
         return "oracle", (
             "Alle technische en historische bewijzen wijzen naar de hulpslag. "
             "Wat tonen jouw visioenen [ORA-xxx] over het patroon in de tijd? "
@@ -327,6 +704,18 @@ def _deterministische_routing(state, leden_per_rol):
         ), "Historisch precedent en verloop bevestigen.", [
             "Is dit eerder gebeurd?",
             "Wat zegt HIS-110 over herstel?"
+        ]
+
+    # Controleer nogmaals vóór beëindiging: blokkeer aan: null zolang conflict openstaat
+    if state.heeft_onopgeloste_conflicten():
+        conflict = state.eerstvolgende_open_conflict()
+        wederhoor_rol = conflict["wederhoor_rol"]
+        lid = leden_per_rol.get(wederhoor_rol, state.leden[0])
+        return wederhoor_rol, (
+            f"{lid.NAAM}, er is een onopgelost conflict gedetecteerd: [{conflict['id_1']}] en [{conflict['id_2']}] "
+            f"op tijdstip/dag {conflict['tijdstip']}. Dwing wederhoor af alvorens het debat kan sluiten."
+        ), f"Wederhoor vereist voor conflict op {conflict['tijdstip']}.", [
+            f"Hoe verklaart {wederhoor_rol} de tegenstrijdigheid op {conflict['tijdstip']}?"
         ]
 
     # Alle luiken bewezen of budget op
@@ -528,7 +917,8 @@ async def run():
     }
 
     # Initialiseer de debat state tracker
-    state = DebatState(leden)
+    incident = os.getenv("INCIDENT", STANDAARD_INCIDENT)
+    state = DebatState(leden, incident=incident)
 
     def bewaar(naam, data):
         (ROOT / naam).write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
@@ -574,7 +964,8 @@ async def run():
             else:
                 rol, vraag, reden, open_vragen = await kies_volgende(
                     beurten, leden, state,
-                    async_client=koning_raw_client, model=os.environ["MODEL_GROOT"], opties=opties
+                    async_client=koning_raw_client, model=os.environ["MODEL_GROOT"], opties=opties,
+                    incident=incident
                 )
 
             if rol is not None and rol not in per_rol:
