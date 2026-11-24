@@ -1,173 +1,154 @@
 {
-  "run_id": "2026-11-24T13:46:05+01:00_66fd9d66",
-  "samenvatting": "De Desync is ontstaan doordat de Engineer op dag 10 een tweede pols ('hulpslag') activeerde naast de eeuwenoude Kroonklok, met informele toestemming van de Archmage.",
+  "run_id": "2026-11-24T14:26:54+01:00_8080e3be",
+  "samenvatting": "De Desync begint op dag 10 om 02:40, toen de hulpslag los van de Kroonklok werd geactiveerd (ENG-011). Binnen twee uur volgden een stokking op de Burchtader rond 04:45 (HIS-035), een schild dat van binnenuit openging rond 04:47 (GUA-019), een doorvoerstijging van +38% (ENG-012), een tijdstempelafwijking (HIS-036) en een leylijndaling tussen dag 7 en 14 (ARC-109). De hoofdoorzaak is de hulpslag als tweede pols naast de Kroonklok: die brengt het systeem uit de maat (HIS-109, HIS-110). Schilden die op de Kroonklok-pols draaien laten verkeer tussen twee tikken ongetoetst door (GUA-103, GUA-104). Hierdoor ontstaan openingen en registratiefouten. De Kroonklok-stokking op dag 10 is niet in elke bron even expliciet benoemd; de koppeling is het best onderbouwde mechanisme, maar nog niet volledig op tijdstip-niveau bewezen. Het terugkerende nachtvenster 04:15 tot 04:50 bevestigt het patroon op dag 10 en dag 22 en wordt door de Oracle als 4-daagse cyclus beschreven. De cyclus is alleen op dag 10, 22 en 30 met gebeurtenissen van andere bronnen onderbouwd.",
   "oorzaak": {
     "ingreep": {
-      "bewering": "De Engineer activeerde op dag 10 om 02:40 in de kelder van de datatoren de hulpslag (kristalresonator + polsversterker) met informele toestemming van de Archmage op dag 8.",
+      "bewering": "Op dag 10 om 02:40 is de hulpslag geactiveerd, los van de Kroonklok (ENG-011). De uitvoerder is niet vastgelegd. De Archmage heeft op dag 8 schriftelijk ingestemd met de activatie, met de instructie 'niet ruchtbaar maken tot het draait' (ARC-106). De Engineer heeft op dag 9 dezelfde goedkeuring van hogerhand genoteerd, zonder tijdstip en zonder koppeling aan de activatie (ENG-105). De toestemming bestaat dus inhoudelijk, maar de uitvoering is formeel onvolledig gedocumenteerd. Er is geen record dat de hulpslag ooit is uitgeschakeld of teruggezet op de Kroonklok-pols.",
       "bewijs": [
-        "ARC-001",
-        "ARC-014",
-        "ARC-015",
-        "ARC-028",
-        "ARC-029",
-        "ARC-042",
-        "ARC-043",
-        "ARC-056",
-        "ARC-057",
-        "ARC-070",
-        "ARC-071",
-        "ARC-084",
-        "ARC-102",
-        "ARC-104",
         "ARC-106",
-        "ARC-109",
-        "ARC-112",
-        "ARC-116",
-        "ENG-010",
         "ENG-011",
         "ENG-012",
-        "ENG-026",
-        "ENG-027",
-        "ENG-029",
         "ENG-061",
-        "ENG-062",
-        "ENG-071",
-        "ENG-101",
-        "ENG-102",
-        "ENG-106",
-        "ENG-107",
-        "ENG-110"
+        "ENG-063",
+        "ENG-064",
+        "ENG-065",
+        "ENG-066",
+        "ENG-105"
       ],
-      "zekerheid": 0.95
+      "zekerheid": 0.85
     },
     "mechanisme": {
-      "bewering": "De tweede pols creëert een timing-conflict: datapakketten vallen midden tussen tikken van de Kroonklok, waardoor schildregel Art. 3 ze als binnenverkeer doorlaat en de leylijnen uit de maat raken.",
+      "bewering": "De causale keten is: een tweede pols naast de Kroonklok (hulpslag) brengt het systeem uit de maat (HIS-109). Records op een andere pols zijn alleen daar leesbaar en gaan verloren als die pols wegvalt (HIS-110). De schilden zijn op de Kroonklok-pols gekoppeld (GUA-103). Artikel 3 laat verkeer dat tussen twee tikken valt zonder toets door (GUA-104). De +38% doorvoer (ENG-012) vergroot het aantal van zulk verkeer in die tussenmomenten. Dat verklaart de van-binnenuit-openingen op dag 10 (GUA-019, GUA-111) en dag 22 (GUA-043, GUA-115) en de tijdstempelafwijkingen op die dagen (HIS-035, HIS-036, HIS-053, HIS-054, HIS-103). De openingen zijn geen extern inbraakpatroon: er zijn geen buitensporen en geen buitenwaarnemingen (GUA-044). De leylijndaling kan via datanetverstoring samenhangen, maar dit is niet bewezen (ARC-109, ARC-116). Het historische contrast is dat datanet naast leylijnen in 23 jaar geen hapering gaf (HIS-106), dus het verschil ligt bij de hulpslag.",
       "bewijs": [
-        "ARC-001",
-        "ARC-014",
-        "ARC-015",
-        "ARC-028",
-        "ARC-029",
-        "ARC-042",
-        "ARC-043",
-        "ARC-056",
-        "ARC-057",
-        "ARC-070",
-        "ARC-071",
-        "ARC-084",
-        "ARC-102",
-        "ARC-104",
-        "ARC-106",
         "ARC-109",
-        "ARC-112",
-        "ARC-116",
-        "GUA-001",
-        "GUA-014",
+        "ENG-012",
         "GUA-019",
         "GUA-043",
         "GUA-044",
-        "GUA-084",
-        "GUA-102",
         "GUA-103",
         "GUA-104",
-        "GUA-105",
-        "GUA-115",
-        "GUA-116",
-        "GUA-120",
-        "HIS-001",
-        "HIS-002",
-        "HIS-006",
         "HIS-035",
         "HIS-036",
-        "HIS-038",
-        "HIS-039",
         "HIS-053",
-        "HIS-054",
-        "HIS-102",
         "HIS-103",
+        "HIS-106",
         "HIS-109",
-        "HIS-110",
-        "HIS-112",
-        "HIS-116"
+        "HIS-110"
       ],
-      "zekerheid": 0.95
+      "zekerheid": 0.8
     },
     "verloop": {
-      "bewering": "De Desync trad op vanaf dag 10 (04:47-04:50), herhaalde zich cyclisch elke 4 dagen en correleerde met de leylijndalingen op dag 14 en 42, de schildopeningen op dag 10 en 22, en de dierlijke onrust.",
+      "bewering": "De verstoring verloopt in een nachtelijk venster van 04:15 tot 04:50 en is periodiek. De Oracle noemt zware nachten op dag 10, 14, 18, 22, 26, 30, 34, 38 en 42, en dat is een cyclus van 4 dagen vanaf het moment van activatie. Dag 9 was rustig (ORA-109). Het eerste zware nachtrecord valt na de activatie (ORA-110). Bevestigde gebeurtenissen in andere bronnen liggen op dag 10 (HIS-035, GUA-019, BEA-019, BEA-020), dag 22 (ENG-026, GUA-043, HIS-053, ORA-122) en dag 30 (BEA-064, BEA-065, ORA-130). De leylijnen zijn laag op dag 14 (ARC-109) en dag 42 (ARC-071 t/m ARC-084), maar normaal op dag 21 en 28 (ARC-113). Het patroon is dus niet strikt continu. Dierenonrust vóór dag 10 is zwak (BEA-015, BEA-017, score 0 tot 1) en niet als voorloper vast te stellen. De onrust op dag 13 en 17 (BEA-037, BEA-038) valt buiten de Oracle-cyclus. Die routinecontroles lopen op 09:00 (ENG-063, ENG-064) en kunnen de nachtelijke onrust om 04:30 niet veroorzaken.",
       "bewijs": [
-        "BEA-003",
-        "BEA-009",
+        "ARC-109",
+        "ARC-113",
+        "BEA-015",
+        "BEA-017",
         "BEA-019",
         "BEA-020",
-        "BEA-028",
         "BEA-037",
-        "BEA-046",
-        "BEA-047",
-        "BEA-055",
+        "BEA-038",
         "BEA-064",
-        "BEA-073",
-        "BEA-082",
-        "BEA-091",
-        "BEA-113",
-        "GUA-001",
-        "GUA-014",
+        "BEA-065",
+        "ENG-026",
+        "ENG-063",
+        "ENG-064",
         "GUA-019",
         "GUA-043",
-        "GUA-044",
-        "GUA-084",
-        "GUA-102",
-        "GUA-103",
-        "GUA-104",
-        "GUA-105",
-        "GUA-115",
-        "GUA-116",
-        "GUA-120"
+        "HIS-035",
+        "ORA-109",
+        "ORA-110",
+        "ORA-114",
+        "ORA-122",
+        "ORA-130",
+        "ORA-142"
       ],
-      "zekerheid": 0.9
+      "zekerheid": 0.72
     }
   },
   "acties": [
     {
-      "actie": "Maak eerst een volledig afschrift van het archiefregister om dataverlies te vermijden.",
-      "reden": "Records geschreven op de hulpslag gaan verloren als de pols abrupt stopt.",
+      "actie": "Maak eerst een volledig, onveranderlijk afschrift van alle registers, het werkboek, de CSV's en de schildlogs, voordat aan de hulpslag wordt gewerkt.",
+      "reden": "Een record dat op een andere pols staat, gaat verloren als die pols wegvalt. Ook de tijdstempels zijn al ontregeld (HIS-110, HIS-103, HIS-112, HIS-116).",
       "bewijs": [
-        "HIS-110"
+        "HIS-103",
+        "HIS-110",
+        "HIS-112",
+        "HIS-116"
       ]
     },
     {
-      "actie": "Breng de hulpslag met de fijnregeling (0,1%-stappen) geleidelijk synchroon met de Kroonklok.",
-      "reden": "Schokvrije synchronisatie zonder data- of leylijnbreuken.",
+      "actie": "Leg de uitvoerder en het tijdstip van de activatie van ENG-011 vast en koppel de goedkeuring ENG-105 en ARC-106 formeel aan die activatie, zodat de toestemmingsketen sluitend is.",
+      "reden": "De toestemming bestaat inhoudelijk, maar mist uitvoerder, tijdstip en ID-koppeling. Zonder dat is elke volgende ingreep ook niet controleerbaar.",
       "bewijs": [
-        "ENG-114",
-        "HIS-110"
+        "ARC-106",
+        "ENG-011",
+        "ENG-105"
       ]
     },
     {
-      "actie": "Herijk de leylijnen en burchtschilden op de centrale Kroonklok.",
-      "reden": "Herstelt de oorspronkelijke harmonie van magie en burchtbeveiliging.",
+      "actie": "Zet de schilden in het nachtvenster 04:00 tot 05:00 zo in dat verkeer tussen twee tikken niet ongetoetst wordt doorgelaten, zolang de hulpslag draait.",
+      "reden": "Artikel 3 laat tussen tikken verkeer zonder toets door. Dat verklaart de openingen op dag 10 en dag 22 (GUA-104, GUA-019, GUA-043).",
       "bewijs": [
-        "ARC-104",
-        "GUA-103"
+        "GUA-019",
+        "GUA-043",
+        "GUA-044",
+        "GUA-104"
+      ]
+    },
+    {
+      "actie": "Breng de hulpslag geleidelijk op de Kroonklok-pols, in kleine stappen van 0,1% en daarna van hooguit 5%, met controle van de maat na elke stap.",
+      "reden": "De fijnregeling in stappen van 0,1% (ENG-061) en de 5%-stap (ENG-062) laten zien dat stapsgewijs bijstellen mogelijk is. Abrupt afschakelen is riskant, en de stap van 11:00 op dag 24 heeft geen zichtbaar effect gehad (ENG-029, ENG-062, BEA-051, BEA-052).",
+      "bewijs": [
+        "ENG-029",
+        "ENG-061",
+        "ENG-062",
+        "GUA-103",
+        "HIS-109"
+      ]
+    },
+    {
+      "actie": "Herijk de leylijnen niet alleen wekelijks maar ook in het nachtvenster 04:00 tot 05:00, met de Oracle-cyclus als referentie.",
+      "reden": "De wekelijkse metingen (dag 7, 14, 21, 28, 42) kunnen de 4-daagse cyclus en de daling tussen dag 7 en 14 niet scheiden van toevallige schommelingen (ARC-109, ARC-113, ARC-071, ARC-084, ORA-114).",
+      "bewijs": [
+        "ARC-071",
+        "ARC-084",
+        "ARC-109",
+        "ARC-113",
+        "ORA-114"
       ]
     }
   ],
   "risicos": [
     {
-      "risico": "Dataverlies van recente records als de polsversterker plotseling wordt uitgeschakeld.",
-      "mitigatie": "Eerst registers back-uppen en frequentie geleidelijk terugbrengen."
+      "risico": "Abrupt stoppen of terugzetten van de hulpslag kan records op de tweede pols laten verloren gaan en de tijdstempels verder ontregelen.",
+      "mitigatie": "Eerst volledig afschrift maken, daarna pas stapsgewijs bijstellen en na elke stap de tijdstempels en de maat controleren."
     },
     {
-      "risico": "Poortschilden die tijdens de afstelling tijdelijk openen van binnenuit.",
-      "mitigatie": "Wachtposten fysiek bemannen en poorten handmatig vergrendelen."
+      "risico": "Zolang de schilden van de benedenstad en poort oost op de ontkoppelde pols draaien, kunnen zij van binnenuit openen. Dat is gebeurd op dag 10 (2 minuten) en dag 22 (3 minuten).",
+      "mitigatie": "Art. 3 tijdelijk aanscherpen in het nachtvenster 04:00 tot 05:00, met bewaking van de schildlogs en een melding bij elke opening."
+    },
+    {
+      "risico": "De toestemmingsketen is formeel onvolledig (geen uitvoerder, geen tijdstip bij ENG-105). Bij een latere audit kan dat leiden tot betwisting van de wettigheid van de ingreep.",
+      "mitigatie": "Vastleggen van uitvoerder en tijdstip van ENG-011 en koppeling van ENG-105 en ARC-106, met een afschrift in het register."
+    },
+    {
+      "risico": "Leylijnen die langdurig laag blijven, kunnen verdere schade aan de magische infrastructuur veroorzaken. De oorzaak is niet bewezen, en daardoor is gerichte bijsturing lastig.",
+      "mitigatie": "Nachtelijke herijking van de leylijnen in het venster 04:00 tot 05:00, en het hulpslag-beleid pas definitief vaststellen na twee sluitende cycli."
+    },
+    {
+      "risico": "Tijdstempelfouten maken de volgorde van gebeurtenissen onzeker (HIS-035, HIS-036, HIS-053, HIS-054). Een verkeerde volgorde kan de oorzaakanalyse ontsporen.",
+      "mitigatie": "Gebeurtenissen alleen op vastgelegd_op én gebeurd_op ordenen, met een expliciete correctie voor afwijkingen, en de ontkoppeling als mogelijke oorzaak meenemen."
     }
   ],
   "voorspelling": {
     "dag": 46,
-    "bewering": "Bij ongewijzigd beleid treedt de volgende desynchronisatiepiek op dag 46 op (cyclus van 4 dagen na dag 42).",
+    "bewering": "Bij ongewijzigd beleid (hulpslag draait los van de Kroonklok, schilden ongewijzigd) zal de Desync opnieuw optreden in het nachtvenster 04:15 tot 04:50 op dag 46, volgens de 4-daagse Oracle-cyclus (42 + 4). Verwacht wordt een zware nacht, openingen van binnenuit en tijdstempelafwijkingen. Zekerheid: matig (ongeveer 0.65), omdat de cyclus alleen op dag 10, 22 en 30 met andere bronnen bevestigd is.",
     "bewijs": [
-      "GUA-111",
-      "GUA-115",
-      "ORA-110",
+      "BEA-064",
+      "BEA-065",
+      "ORA-130",
+      "ORA-138",
       "ORA-142"
     ]
   }
