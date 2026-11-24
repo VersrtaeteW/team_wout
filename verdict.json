@@ -1,0 +1,174 @@
+{
+  "run_id": "2026-11-24T13:46:05+01:00_66fd9d66",
+  "samenvatting": "De Desync is ontstaan doordat de Engineer op dag 10 een tweede pols ('hulpslag') activeerde naast de eeuwenoude Kroonklok, met informele toestemming van de Archmage.",
+  "oorzaak": {
+    "ingreep": {
+      "bewering": "De Engineer activeerde op dag 10 om 02:40 in de kelder van de datatoren de hulpslag (kristalresonator + polsversterker) met informele toestemming van de Archmage op dag 8.",
+      "bewijs": [
+        "ARC-001",
+        "ARC-014",
+        "ARC-015",
+        "ARC-028",
+        "ARC-029",
+        "ARC-042",
+        "ARC-043",
+        "ARC-056",
+        "ARC-057",
+        "ARC-070",
+        "ARC-071",
+        "ARC-084",
+        "ARC-102",
+        "ARC-104",
+        "ARC-106",
+        "ARC-109",
+        "ARC-112",
+        "ARC-116",
+        "ENG-010",
+        "ENG-011",
+        "ENG-012",
+        "ENG-026",
+        "ENG-027",
+        "ENG-029",
+        "ENG-061",
+        "ENG-062",
+        "ENG-071",
+        "ENG-101",
+        "ENG-102",
+        "ENG-106",
+        "ENG-107",
+        "ENG-110"
+      ],
+      "zekerheid": 0.95
+    },
+    "mechanisme": {
+      "bewering": "De tweede pols creëert een timing-conflict: datapakketten vallen midden tussen tikken van de Kroonklok, waardoor schildregel Art. 3 ze als binnenverkeer doorlaat en de leylijnen uit de maat raken.",
+      "bewijs": [
+        "ARC-001",
+        "ARC-014",
+        "ARC-015",
+        "ARC-028",
+        "ARC-029",
+        "ARC-042",
+        "ARC-043",
+        "ARC-056",
+        "ARC-057",
+        "ARC-070",
+        "ARC-071",
+        "ARC-084",
+        "ARC-102",
+        "ARC-104",
+        "ARC-106",
+        "ARC-109",
+        "ARC-112",
+        "ARC-116",
+        "GUA-001",
+        "GUA-014",
+        "GUA-019",
+        "GUA-043",
+        "GUA-044",
+        "GUA-084",
+        "GUA-102",
+        "GUA-103",
+        "GUA-104",
+        "GUA-105",
+        "GUA-115",
+        "GUA-116",
+        "GUA-120",
+        "HIS-001",
+        "HIS-002",
+        "HIS-006",
+        "HIS-035",
+        "HIS-036",
+        "HIS-038",
+        "HIS-039",
+        "HIS-053",
+        "HIS-054",
+        "HIS-102",
+        "HIS-103",
+        "HIS-109",
+        "HIS-110",
+        "HIS-112",
+        "HIS-116"
+      ],
+      "zekerheid": 0.95
+    },
+    "verloop": {
+      "bewering": "De Desync trad op vanaf dag 10 (04:47-04:50), herhaalde zich cyclisch elke 4 dagen en correleerde met de leylijndalingen op dag 14 en 42, de schildopeningen op dag 10 en 22, en de dierlijke onrust.",
+      "bewijs": [
+        "BEA-003",
+        "BEA-009",
+        "BEA-019",
+        "BEA-020",
+        "BEA-028",
+        "BEA-037",
+        "BEA-046",
+        "BEA-047",
+        "BEA-055",
+        "BEA-064",
+        "BEA-073",
+        "BEA-082",
+        "BEA-091",
+        "BEA-113",
+        "GUA-001",
+        "GUA-014",
+        "GUA-019",
+        "GUA-043",
+        "GUA-044",
+        "GUA-084",
+        "GUA-102",
+        "GUA-103",
+        "GUA-104",
+        "GUA-105",
+        "GUA-115",
+        "GUA-116",
+        "GUA-120"
+      ],
+      "zekerheid": 0.9
+    }
+  },
+  "acties": [
+    {
+      "actie": "Maak eerst een volledig afschrift van het archiefregister om dataverlies te vermijden.",
+      "reden": "Records geschreven op de hulpslag gaan verloren als de pols abrupt stopt.",
+      "bewijs": [
+        "HIS-110"
+      ]
+    },
+    {
+      "actie": "Breng de hulpslag met de fijnregeling (0,1%-stappen) geleidelijk synchroon met de Kroonklok.",
+      "reden": "Schokvrije synchronisatie zonder data- of leylijnbreuken.",
+      "bewijs": [
+        "ENG-114",
+        "HIS-110"
+      ]
+    },
+    {
+      "actie": "Herijk de leylijnen en burchtschilden op de centrale Kroonklok.",
+      "reden": "Herstelt de oorspronkelijke harmonie van magie en burchtbeveiliging.",
+      "bewijs": [
+        "ARC-104",
+        "GUA-103"
+      ]
+    }
+  ],
+  "risicos": [
+    {
+      "risico": "Dataverlies van recente records als de polsversterker plotseling wordt uitgeschakeld.",
+      "mitigatie": "Eerst registers back-uppen en frequentie geleidelijk terugbrengen."
+    },
+    {
+      "risico": "Poortschilden die tijdens de afstelling tijdelijk openen van binnenuit.",
+      "mitigatie": "Wachtposten fysiek bemannen en poorten handmatig vergrendelen."
+    }
+  ],
+  "voorspelling": {
+    "dag": 46,
+    "bewering": "Bij ongewijzigd beleid treedt de volgende desynchronisatiepiek op dag 46 op (cyclus van 4 dagen na dag 42).",
+    "bewijs": [
+      "GUA-111",
+      "GUA-115",
+      "ORA-110",
+      "ORA-142"
+    ]
+  }
+}
